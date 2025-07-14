@@ -1,4 +1,4 @@
-const canvas = document.getElementById("game");
+  const canvas = document.getElementById("game");
     const ctx = canvas.getContext("2d");
     canvas.width = 640;
     canvas.height = 480;
@@ -20,24 +20,65 @@ const canvas = document.getElementById("game");
 
     backgroundImages['Green Plains'].src = "resources/sprites/tilesets/grass.png";
     backgroundImages['Slime Woods'].src = "resources/sprites/tilesets/plains.png";
-    backgroundImages['House Interior'].src = "resources/sprites/tilesets/floor.png";
+    // backgroundImages['House Interior'].src = "resources/sprites/tilesets/floor.png";
+// ===============================================================================
 
-    const tileImages = {
-      fence: new Image(),
-      wall: new Image(),
-      floor: new Image(),
-      chest: new Image(),
-      rock: new Image()
-    };
-    tileImages.fence.src = "resources/sprites/tilesets/fence.png";
-    tileImages.wall.src = "resources/sprites/tilesets/walls/walls.png";
-    tileImages.floor.src = "resources/sprites/tilesets/floor.png";
-    tileImages.chest.src = "resources/sprites/objects/chest.png";
-    tileImages.rock.src = "resources/sprites/objects/rock_in_water_01.png";
+const tileImages = {
+  grass: new Image(),
+  dirt: new Image(),
+  tree: new Image(),
+  fenceTop: new Image(),
+  fenceBottom: new Image(),
+  fenceLeft: new Image(),
+  fenceRight: new Image(),
+  fenceUL: new Image(),  // Upper Left
+  fenceUR: new Image(),  // Upper Right
+  fenceLL: new Image(),  // Lower Left
+  fenceLR: new Image(),   // Lower Right
+  pathLeft: new Image(),
+  pathCenter: new Image(),
+  pathTop: new Image(),
+  pathRight: new Image(),
+  partVertical: new Image(),
+  pathDown: new Image(),
+
+};
+
+tileImages.grass.src = "resources/sprites/tilesets/Tiles/Slice 19.png";
+tileImages.dirt = new Image();
+tileImages.dirt.src = "resources/sprites/tilesets/Tiles/Slice 62.png";
+tileImages.tree = new Image();
+tileImages.tree.src = "resources/sprites/tilesets/Tiles/Slice 12.png";
+
+tileImages.fenceUR.src = "resources/sprites/tilesets/Tiles/Slice 1.png";
+tileImages.fenceTop.src = "resources/sprites/tilesets/Tiles/Slice 2.png";
+tileImages.fenceUL.src = "resources/sprites/tilesets/Tiles/Slice 3.png";
+tileImages.fenceLeft.src = "resources/sprites/tilesets/Tiles/Slice 4.png";
+tileImages.fenceLL.src = "resources/sprites/tilesets/Tiles/Slice 5.png";
+tileImages.fenceLR.src = "resources/sprites/tilesets/Tiles/Slice 7.png";
+tileImages.fenceRight.src = "resources/sprites/tilesets/Tiles/Slice 4.png"; // Use left for both, unless you split
+tileImages.fenceBottom = tileImages.fenceTop; // same image reused
+tileImages.pathLeft.src = "resources/sprites/tilesets/Tiles/Slice 14.png";
+tileImages.pathRight.src = "resources/sprites/tilesets/Tiles/Slice 16.png";
+tileImages.pathTop.src = "resources/sprites/tilesets/Tiles/Slice 27.png";
+tileImages.pathCenter.src = "resources/sprites/tilesets/Tiles/Slice 28.png";
+tileImages.partVertical.src = "resources/sprites/tilesets/Tiles/Slice 28.png";
+tileImages.pathDown.src = "resources/sprites/tilesets/Tiles/Slice 29.png";
+// tileImages.pLeftTopCor.src = "resources/sprites/tilesets/Tiles/Slice 30.png";
+// tileImages.pleftBtmCor.src = "resources/sprites/tilesets/Tiles/Slice 32.png";
+// tileImages.pRightTopCor.src = "resources/sprites/tilesets/Tiles/Slice 36.png";
+// tileImages..src = "";
+// pRightBtmCor    resources/sprites/tilesets/Tiles/Slice 38.png
+
+// ============================================
+// water starts at slice 67
+// ====================================
+   
 
 
     let currentArea = 'Green Plains';
 
+    // =============== tile sets ==========================================
     const playerWalking = new Image();
     playerWalking.src = "resources/sprites/characters/Walking.png";
 
@@ -47,14 +88,31 @@ const canvas = document.getElementById("game");
     const playerIdle = new Image();
     playerIdle.src = "resources/sprites/characters/mainChar.png";
 
+
+    //========== enemy sprites ========================================
     const slimeImage = new Image();
-    slimeImage.src = "resources/sprites/characters/slime.png";
+    slimeImage.src = "resources/sprites/characters/Idle/Slime2_Idle_body.png";
+
+    const slimeAtt = new Image();
+    slimeAtt.src = "resources/sprites/characters/Attack/Slime2_Attack_body.png";
+
+    const slimeWalk = new Image();
+    slimeWalk.src = "resources/sprites/characters/Death/Slime2_Death_body.png";
+
+    const slimeDie = new Image();
+    slimeDie.src = "resources/sprites/characters/Death/Slime2_Death_body.png";
+
+    const slimeHurt = new Image();
+    slimeHurtsrc = "resources/sprites/characters/Hurt/Slime2_Hurt_body.png";
+
 
     const player = {
-      x: 100,
-      y: 100,
-      width: 40,
+      x: 80,
+      y: 120,
+      width: 40.4,
       height: 50,
+      drawWidth: 80,
+      drawHeight: 100,
       frameX: 0,
       frameY: 0,
       speed: 2,
@@ -74,8 +132,31 @@ const canvas = document.getElementById("game");
       deathTick: 0
     };
 
+    const inventory = {
+      items: ["Potion"],
+      weapon: ["Bronze Sword"]
+    };
+
+    const quests = [
+      { id: 1, name: "Kill 10 Slimes", progress: 0, goal: 10, completed: false }
+    ];
+
     let enemies = [
-      { x: 300, y: 300, width: 30, height: 40, hp: 30, alive: true, frameX: 0, frameTick: 0, frameY: 0, state: 'idle' }
+      {
+        x: 300,
+        y: 300,
+        width: 65,
+        height: 40,
+        hp: 30,
+        attack: 2,
+        alive: true,
+        frameX: 0,
+        frameTick: 0,
+        frameY: 0,
+        state: 'idle',
+        frameTick: 0,
+        deathTick: 0
+      }
     ];
 
     const npcs = [
@@ -83,37 +164,37 @@ const canvas = document.getElementById("game");
     ];
 
     const chests = [
-      { x: 160, y: 160, width: 32, height: 32, opened: false, item: 'potion' }
+      { x: 160, y: 160, width: 32, height: 32, opened: false, item: 'potion', weapon: "Bronze Sword" }
     ];
 
     function drawVillage() {
-      if (currentArea !== 'Green Plains') return;
+    //   if (currentArea !== 'Green Plains') return;
 
-      for (let x = 64; x <= 576; x += 32) {
-        ctx.drawImage(tileImages.fence, x, 64, 32, 32);
-        ctx.drawImage(tileImages.fence, x, 384, 32, 32);
-      }
-      for (let y = 96; y <= 352; y += 32) {
-        ctx.drawImage(tileImages.fence, 64, y, 32, 32);
-        ctx.drawImage(tileImages.fence, 576, y, 32, 32);
-      }
+    //   for (let x = 64; x <= 576; x += 32) {
+    //     ctx.drawImage(tileImages.fence, x, 64, 32, 32);
+    //     ctx.drawImage(tileImages.fence, x, 384, 32, 32);
+    //   }
+    //   for (let y = 96; y <= 352; y += 32) {
+    //     ctx.drawImage(tileImages.fence, 64, y, 32, 32);
+    //     ctx.drawImage(tileImages.fence, 576, y, 32, 32);
+    //   }
 
-      ctx.clearRect(320, 384, 32, 32);
+    //   ctx.clearRect(320, 384, 32, 32);
 
-      for (let y = 96; y <= 352; y += 32) {
-        for (let x = 96; x <= 544; x += 32) {
-          ctx.drawImage(tileImages.floor, x, y, 32, 32);
-        }
-      }
+    //   for (let y = 96; y <= 352; y += 32) {
+    //     for (let x = 96; x <= 544; x += 32) {
+    //       ctx.drawImage(tileImages.floor, x, y, 32, 32);
+    //     }
+    //   }
 
-      ctx.drawImage(tileImages.wall, 128, 128, 32, 32);
-      ctx.drawImage(tileImages.wall, 160, 128, 32, 32);
-      ctx.drawImage(tileImages.rock, 192, 192, 32, 32);
+    //   ctx.drawImage(tileImages.wall, 128, 128, 32, 32);
+    //   ctx.drawImage(tileImages.wall, 160, 128, 32, 32);
+    //   ctx.drawImage(tileImages.rock, 192, 192, 32, 32);
 
-      chests.forEach(chest => {
-        if (!chest.opened) ctx.drawImage(tileImages.chest, chest.x, chest.y, chest.width, chest.height);
-      });
-    }
+    //   chests.forEach(chest => {
+    //     if (!chest.opened) ctx.drawImage(tileImages.chest, chest.x, chest.y, chest.width, chest.height);
+    //   });
+    // }
 
     function drawBackground() {
       const img = backgroundImages[currentArea];
@@ -142,16 +223,16 @@ const canvas = document.getElementById("game");
       });
     }
 
-    function enterHouse() {
-      if (currentArea === 'Green Plains' && player.x > 120 && player.x < 190 && player.y > 90 && player.y < 160) {
-        currentArea = 'House Interior';
-        player.x = 100;
-        player.y = 300;
-        updateHUD();
-      }
-    }
+    // function enterHouse() {
+    //   if (currentArea === 'Green Plains' && player.x > 120 && player.x < 190 && player.y > 90 && player.y < 160) {
+    //     currentArea = 'House Interior';
+    //     player.x = 100;
+    //     player.y = 300;
+    //     updateHUD();
+    //   }
+    // }
 
-    function exitHouse() {
+    // function exitHouse() {
       if (currentArea === 'House Interior' && player.y < 100) {
         currentArea = 'Green Plains';
         player.x = 150;
@@ -207,7 +288,7 @@ const canvas = document.getElementById("game");
       } else {
         const dirY = { down: 0, right: 1, up: 2, left: 3 };
         player.frameY = dirY[player.direction];
-        
+
       }
     }
 
@@ -259,14 +340,15 @@ const canvas = document.getElementById("game");
         player.height,
         player.x,
         player.y,
-        player.width,
-        player.height
+        player.drawWidth,
+        player.drawHeight
       );
 
       ctx.fillStyle = "red";
-      ctx.fillRect(player.x, player.y - 10, player.width, 5);
+      ctx.fillRect(player.x, player.y - 10, player.drawWidth, 5);
       ctx.fillStyle = "lime";
-      ctx.fillRect(player.x, player.y - 10, (player.hp / player.maxHp) * player.width, 5);
+      ctx.fillRect(player.x, player.y - 10, (player.hp / player.maxHp) * player.drawWidth, 5);
+
     }
 
     function talkToNPCs() {
@@ -289,7 +371,17 @@ const canvas = document.getElementById("game");
       if (areaName === 'Slime Woods') {
         enemies = [];
         for (let i = 0; i < 5; i++) {
-          enemies.push({ x: 100 + i * 80, y: 300, width: 30, height: 40, hp: 30, alive: true, frameX: 0, frameTick: 0, frameY: 0 });
+          enemies.push({
+            x: 100 + i * 80,
+            y: 300,
+            width: 65,
+            height: 40,
+            hp: 30,
+            alive: true,
+            frameX: 0,
+            frameTick: 0,
+            frameY: 0
+          });
         }
       }
     }
@@ -304,23 +396,17 @@ const canvas = document.getElementById("game");
     }
 
     function drawBackground() {
-      const img = backgroundImages[currentArea];
-      for (let y = 0; y < canvas.height; y += 32) {
-        for (let x = 0; x < canvas.width; x += 32) {
-          ctx.drawImage(img, 0, 0, 16, 16, x, y, 32, 32);
-        }
+      if (currentArea === 'Green Plains') {
+        drawMap(townMap);
+      } else if (currentArea === 'Slime Woods') {
+        drawMap(slimeForestMap);
+      } else {
+        // Default filler background
+        ctx.fillStyle = "green";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
       }
     }
 
-
-    //   function attack() {
-    //   if (attackCooldown > 0 || player.hp <= 0) return;
-    //   if (keys[' '] || mouseClicked) {
-    //     attackCooldown = 20;
-    //     player.attacking = true;
-    //     setTimeout(() => player.attacking = false, 300);
-    //   }
-    // }
 
     function attack() {
       if (attackCooldown > 0 || player.hp <= 0) return;
@@ -339,11 +425,6 @@ const canvas = document.getElementById("game");
             player.attacking = false;
           }
         }, 100);
-
-
-        // setTimeout(() => {
-        //   player.attacking = false;
-        // }, 300); // Reset attack sprite after 300ms
 
         enemies.forEach(enemy => {
           if (
@@ -371,8 +452,186 @@ const canvas = document.getElementById("game");
         });
       }
     }
+    // ========================================
+    //    AREAS
+    // ===========================================
+    
 
 
+    //     const masterTileset = new Image();
+    // masterTileset.src = "resources/sprites/tilesets/adventure_tileset.png"; // copy it there
+    // const tileMap = {
+    //   grass: { x: 0, y: 0 },
+    //   dirt: { x: 1, y: 0 },
+    //   tree: { x: 5, y: 3 }
+    //   // ...
+    // };
+
+    // ctx.drawImage(masterTileset,
+    //   tileMap.grass.x * 16, tileMap.grass.y * 16, 16, 16,
+    //   x, y, 32, 32);
+
+
+
+    // Save/Load functionality:
+
+    const tileset = new Image();
+    tileset.src = "resources/sprites/tilesets/Adventure Awaits Asset Pack 1.0.png"; // <-- Adjust path if needed
+    const TILE_SIZE = 16;     // size in tileset
+    const SCALE = 2;          // to make 32×32 on screen
+    const RENDER_SIZE = TILE_SIZE * SCALE;
+
+    function drawTile(tileIndex, dx, dy) {
+      const tilesPerRow = tileset.width / TILE_SIZE;
+      const sx = (tileIndex % tilesPerRow) * TILE_SIZE;
+      const sy = Math.floor(tileIndex / tilesPerRow) * TILE_SIZE;
+
+      ctx.drawImage(
+        tileset,
+        sx, sy, TILE_SIZE, TILE_SIZE,
+        dx, dy, RENDER_SIZE, RENDER_SIZE
+      );
+    }
+
+   function drawMap(map) {
+  for (let row = 0; row < map.length; row++) {
+    for (let col = 0; col < map[row].length; col++) {
+      const tileName = map[row][col];
+      const tileImage = tileImages[tileName];
+
+      if (tileImage) {
+        ctx.drawImage(tileImage, col * 32, row * 32, 32, 32);
+      }
+    }
+  }
+}
+
+
+   const townMap = [
+  ["fenceUL", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceUR"],
+  ["fenceLeft", "grass", "grass", "tree", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "tree", "grass", "fenceRight"],
+  ["fenceLeft", "grass", "grass", "grass", "dirt", "dirt", "dirt", "grass", "grass", "grass", "tree", "grass", "grass", "grass", "dirt", "dirt", "dirt", "grass", "grass", "fenceRight"],
+  ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+  ["fenceLeft", "grass", "grass", "grass", "tree", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "tree", "grass", "grass", "fenceRight"],
+  ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+  ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+  ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+  ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "dirt", "dirt", "dirt"],
+  ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "dirt", "dirt"],
+  ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+  ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+  ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+  ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+  ["fenceLL", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceLR"]
+];
+
+    const houseImage = new Image();
+    houseImage.src = "resources/sprites/tilesets/Tiles/Slice 9.png"; // Adjust path!
+
+    // Inside drawVillage or gameLoop (after map):
+    ctx.drawImage(houseImage, 288, 160, 96, 96);
+
+
+    const slimeForestMap = [
+      ["fenceUL", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceUR"],
+  ["fenceLeft", "grass", "grass", "tree", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "tree", "grass", "fenceRight"],
+  ["fenceLeft", "grass", "grass", "grass", "dirt", "dirt", "dirt", "grass", "grass", "grass", "tree", "grass", "grass", "grass", "dirt", "dirt", "dirt", "grass", "grass", "fenceRight"],
+  ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+  ["fenceLeft", "grass", "grass", "grass", "tree", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "tree", "grass", "grass", "fenceRight"],
+  ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+  ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+  ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+  ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "dirt", "dirt", "dirt"],
+  ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "dirt", "dirt"],
+  ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+  ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+  ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+  ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+  ["fenceLL", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceLR"]
+      
+    ];
+
+    tileset.onload = () => {
+      updateHUD();
+      gameLoop();
+    };
+
+    // ======================================================
+
+   function parseMap(stringMap) {
+  const baseMap = [];
+  const decorMap = [];
+
+  for (let row = 0; row < stringMap.length; row++) {
+    baseMap[row] = [];
+    decorMap[row] = [];
+
+    for (let col = 0; col < stringMap[row].length; col++) {
+      const key = stringMap[row][col];
+
+      baseMap[row][col] = tileIndexMap["grass"]; // Always render grass first
+
+      // Decor objects with layering
+      if (key === "grass") {
+        decorMap[row][col] = null;
+      } else {
+        decorMap[row][col] = {
+          index: tileIndexMap[key],
+          zIndex: ["tree"].includes(key) ? 2 : 1 // Trees go above player
+        };
+      }
+    }
+  }
+
+  return { baseMap, decorMap };
+}
+
+
+
+    // ======================================================
+    function saveGame() {
+      const data = {
+        player,
+        inventory,
+        quests,
+        currentArea
+      };
+
+      localStorage.setItem("gameSave", JSON.stringify(data));
+      alert("Game saved!");
+    }
+
+    function loadGame() {
+      const data = JSON.parse(localStorage.getItem("gameSave"));
+      if (data) {
+        Object.assign(player, data.player);
+        Object.assign(inventory, data.inventory);
+        Object.assign(quests[0], data.quests[0]);
+        currentArea = data.currentArea || 'Green Plains';
+        updateHUD();
+      }
+    }
+    function renderInventory() {
+      const list = document.getElementById("inventoryItems");
+      list.innerHTML = "";
+      inventory.items.forEach(item => {
+        const li = document.createElement("li");
+        li.textContent = item;
+        list.appendChild(li);
+      });
+    }
+    document.addEventListener("keydown", e => {
+      if (e.key === "F5") {
+        e.preventDefault();
+        saveGame();
+      }
+      if (e.key === "F9") loadGame();
+      if (e.key.toLowerCase() === "i") {
+        const inv = document.getElementById("inventory");
+        inv.style.display = inv.style.display === "none" ? "block" : "none";
+        renderInventory();
+      }
+    });
 
     function gameLoop() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -399,4 +658,4 @@ const canvas = document.getElementById("game");
     playerIdle.onload = () => {
       updateHUD();
       gameLoop();
-    }
+    };

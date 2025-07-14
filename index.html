@@ -2,25 +2,658 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>2D Action RPG</title>
-  <link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>2D Action RPG</title>
+    <!-- <link rel="stylesheet" href="style.css"> -->
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            overflow: hidden;
+            margin-top: 105px;
+            color: white;
+            font-family: monospace;
+        }
+
+        canvas {
+            display: flex;
+            margin: 0 auto;
+            image-rendering: pixelated;
+            background: #111;
+            /* width: 75vw;
+      height: 90vh; */
+        }
+
+        #gameContainer {
+            display: flex;
+            gap: 20px;
+        }
+
+        #game {
+            border: 2px solid #333;
+            background-color: #000;
+        }
+
+        #ui {
+            width: 200px;
+            background-color: #2a2a2a;
+            padding: 15px;
+            border-radius: 5px;
+        }
+
+        #inventory {
+            display: none;
+            position: absolute;
+            top: 50px;
+            right: 50px;
+            background-color: #2a2a2a;
+            padding: 15px;
+            border-radius: 5px;
+            border: 2px solid #333;
+            z-index: 1000;
+        }
+
+        #inventoryItems {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+        }
+
+        #inventoryItems li {
+            padding: 5px;
+            margin: 2px 0;
+            background-color: #333;
+            border-radius: 3px;
+        }
+
+        .controls {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #ccc;
+        }
+    </style>
 </head>
 
 <body>
-  <canvas id="game"></canvas>
-  <div id="hud">
-    <div id="areaName">Area: Green Plains</div>
-    <div id="level">Level: 1</div>
-    <div id="exp">EXP: 0 / 100</div>
-    <div id="strength">Strength: 10</div>
-    <div id="armor">Armor: None</div>
-    <div id="weapon">Weapon: Fists</div>
-    <div id="potions">Potions: 1</div>
-  </div>
+    <div id="gameContainer">
+        <canvas id="game"></canvas>
+        <div id="ui">
+            <div id="areaName">Area: Green Plains</div>
+            <div id="level">Level: 1</div>
+            <div id="exp">EXP: 0 / 100</div>
+            <div id="strength">Strength: 10</div>
+            <div id="armor">Armor: None</div>
+            <div id="weapon">Weapon: Fists</div>
+            <div id="potions">Potions: 1</div>
+            <div class="controls">
+                <p>WASD: Move</p>
+                <p>Space/Click: Attack</p>
+                <p>I: Inventory</p>
+                <p>F5: Save Game</p>
+                <p>F9: Load Game</p>
+            </div>
+        </div>
+    </div>
 
-  <script src="main.js"></script>
+    <div id="inventory">
+        <h3>Inventory</h3>
+        <ul id="inventoryItems"></ul>
+        <button onclick="document.getElementById('inventory').style.display='none'">Close</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("game");
+        const ctx = canvas.getContext("2d");
+        canvas.width = 640;
+        canvas.height = 480;
+
+        const keys = {};
+        let mouseClicked = false;
+        let attackCooldown = 0;
+
+        document.addEventListener("keydown", e => keys[e.key.toLowerCase()] = true);
+        document.addEventListener("keyup", e => keys[e.key.toLowerCase()] = false);
+        document.addEventListener("mousedown", () => mouseClicked = true);
+        document.addEventListener("mouseup", () => mouseClicked = false);
+
+        // Tile images with z-index properties
+        const tileImages = {
+            grass: { img: load("resources/sprites/tilesets/Tiles/Slice 19.png"), zIndex: 0 },
+            dirt: { img: load("resources/sprites/tilesets/Tiles/Slice 62.png"), zIndex: 0 },
+            tree: { img: load("resources/sprites/tilesets/Tiles/Slice 12.png"), zIndex: 1 },
+            fenceTop: { img: load("resources/sprites/tilesets/Tiles/Slice 2.png"), zIndex: 1 },
+            fenceBottom: { img: load("resources/sprites/tilesets/Tiles/Slice 2.png"), zIndex: 1 },
+            fenceLeft: { img: load("resources/sprites/tilesets/Tiles/Slice 4.png"), zIndex: 1 },
+            fenceRight: { img: load("resources/sprites/tilesets/Tiles/Slice 4.png"), zIndex: 1 },
+            fenceUL: { img: load("resources/sprites/tilesets/Tiles/Slice 3.png"), zIndex: 1 },
+            fenceUR: { img: load("resources/sprites/tilesets/Tiles/Slice 1.png"), zIndex: 1 },
+            fenceLL: { img: load("resources/sprites/tilesets/Tiles/Slice 5.png"), zIndex: 1 },
+            fenceLR: { img: load("resources/sprites/tilesets/Tiles/Slice 7.png"), zIndex: 1 },
+            house: { img: load("resources/sprites/tilesets/house.png"), zIndex: 1 }
+        };
+
+        function load(path) {
+            const img = new Image();
+            img.src = path;
+            return img;
+        }
+
+
+        // Character sprites
+        const playerSprites = {
+            idle: load("resources/sprites/characters/mainChar.png"),
+            walking: load("resources/sprites/characters/Walking.png"),
+            attacking: load("resources/sprites/characters/Attacking.png")
+        };
+
+
+        const slimeSprites = {
+            idle: load("resources/sprites/characters/Idle/Slime2_Idle_body.png"),
+            walking: load("resources/sprites/characters/Attack/Slime2_Attack_body.png"),
+            attacking: load("resources/sprites/characters/Attack/Slime2_Attack_body.png") // Use what fits
+        };
+
+
+        const npcSprite = load("resources/sprites/characters/NPC/NPC1.png"); // Use your correct NPC path
+
+       
+
+        let currentArea = 'Green Plains';
+
+        const player = {
+            x: 80,
+            y: 120,
+            width: 32,
+            height: 32,
+            speed: 2,
+            moving: false,
+            direction: "down",
+            state: "idle",
+            hp: 100,
+            maxHp: 100,
+            level: 1,
+            exp: 0,
+            attack: 10,
+            strength: 10,
+            armor: "None",
+            weapon: "Fists",
+            potions: 1,
+            attacking: false,
+            attackTimer: 0,
+        
+        };
+
+        const inventory = {
+            items: ["Potion"],
+            weapon: ["Bronze Sword"]
+        };
+
+        const quests = [
+            { id: 1, name: "Kill 10 Slimes", progress: 0, goal: 10, completed: false }
+        ];
+
+        let enemies = [];
+        let npcs = [];
+
+        // Enemy AI class
+        class Enemy {
+            constructor(x, y, area) {
+                this.x = x;
+                this.y = y;
+                this.width = 32;
+                this.height = 32;
+                this.hp = 30;
+                this.maxHp = 30;
+                this.attack = 5;
+                this.alive = true;
+                this.speed = 0.5;
+                this.state = 'roaming'; // roaming, chasing, attacking
+                this.direction = Math.random() * Math.PI * 2;
+                this.moveTimer = 0;
+                this.attackTimer = 0;
+                this.detectionRange = 80;
+                this.attackRange = 40;
+                this.area = area;
+                this.roamDistance = 100;
+                this.originalX = x;
+                this.originalY = y;
+            }
+
+            update() {
+                if (!this.alive) return;
+
+                const distToPlayer = Math.sqrt(
+                    Math.pow(this.x - player.x, 2) + Math.pow(this.y - player.y, 2)
+                );
+
+                // Only be aggressive if not in safe zone or if it's the original slime
+                const isInSafeZone = currentArea === 'Green Plains' &&
+                    !(this.x === 300 && this.y === 300); // Original slime exception
+
+                if (!isInSafeZone && distToPlayer <= this.detectionRange) {
+                    this.state = 'chasing';
+
+                    if (distToPlayer <= this.attackRange) {
+                        this.state = 'attacking';
+                        this.attackPlayer();
+                    } else {
+                        this.chasePlayer();
+                    }
+                } else {
+                    this.state = 'roaming';
+                    this.roam();
+                }
+
+                if (this.attackTimer > 0) this.attackTimer--;
+            }
+
+            roam() {
+                this.moveTimer++;
+
+                if (this.moveTimer % 120 === 0) { // Change direction every 2 seconds
+                    this.direction = Math.random() * Math.PI * 2;
+                }
+
+                // Move in current direction
+                const newX = this.x + Math.cos(this.direction) * this.speed;
+                const newY = this.y + Math.sin(this.direction) * this.speed;
+
+                // Check boundaries and roam distance
+                const distFromOrigin = Math.sqrt(
+                    Math.pow(newX - this.originalX, 2) + Math.pow(newY - this.originalY, 2)
+                );
+
+                if (newX > 32 && newX < canvas.width - 64 &&
+                    newY > 32 && newY < canvas.height - 64 &&
+                    distFromOrigin < this.roamDistance) {
+                    this.x = newX;
+                    this.y = newY;
+                } else {
+                    // Turn around if hitting boundary
+                    this.direction += Math.PI;
+                }
+            }
+
+            chasePlayer() {
+                const dx = player.x - this.x;
+                const dy = player.y - this.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance > 0) {
+                    this.x += (dx / distance) * this.speed * 1.5;
+                    this.y += (dy / distance) * this.speed * 1.5;
+                }
+            }
+
+            attackPlayer() {
+                if (this.attackTimer <= 0) {
+                    this.attackTimer = 120; // Attack every second
+                    player.hp -= this.attack;
+                    if (player.hp <= 0) {
+                        player.hp = 0;
+                        // Game over logic could go here
+                    }
+                }
+            }
+
+            draw() {
+                if (!this.alive) return;
+
+                let sprite = slimeSprites.idle;
+                if (this.state === 'chasing') sprite = slimeSprites.walking;
+                if (this.state === 'attacking') sprite = slimeSprites.attacking;
+
+                ctx.drawImage(sprite, this.x, this.y, this.width, this.height);
+
+                // Health bar
+                ctx.fillStyle = "red";
+                ctx.fillRect(this.x, this.y - 10, this.width, 5);
+                ctx.fillStyle = "lime";
+                ctx.fillRect(this.x, this.y - 10, (this.hp / this.maxHp) * this.width, 5);
+            }
+        }
+
+        // Initialize enemies and NPCs based on area
+        function initializeArea() {
+            enemies = [];
+            npcs = [];
+
+            if (currentArea === 'Green Plains') {
+                // Safe zone with NPC and house, plus one original slime
+                enemies.push(new Enemy(300, 300, 'Green Plains')); // Original slime
+                npcs.push({ x: 200, y: 200, width: 32, height: 32, message: "Welcome to our village, hero!" });
+            } else if (currentArea === 'Slime Woods') {
+                // Dangerous area with multiple enemies
+                for (let i = 0; i < 6; i++) {
+                    enemies.push(new Enemy(
+                        100 + Math.random() * 400,
+                        100 + Math.random() * 300,
+                        'Slime Woods'
+                    ));
+                }
+            }
+        }
+
+        // Map definitions
+        const townMap = [
+            ["fenceUL", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceUR"],
+            ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+            ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "tree", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+            ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+            ["fenceLeft", "grass", "grass", "grass", "tree", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "tree", "grass", "grass", "fenceRight"],
+            ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+            ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+            ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+            ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass"],
+            ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+            ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+            ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+            ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+            ["fenceLeft", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "grass", "fenceRight"],
+            ["fenceLL", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceLR"]
+        ];
+
+        const slimeForestMap = [
+            ["fenceUL", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceTop", "fenceUR"],
+            ["fenceLeft", "dirt", "dirt", "tree", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "tree", "dirt", "fenceRight"],
+            ["fenceLeft", "dirt", "dirt", "dirt", "tree", "dirt", "dirt", "dirt", "dirt", "dirt", "tree", "dirt", "dirt", "dirt", "dirt", "dirt", "tree", "dirt", "dirt", "fenceRight"],
+            ["fenceLeft", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "fenceRight"],
+            ["fenceLeft", "dirt", "dirt", "dirt", "tree", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "tree", "dirt", "dirt", "fenceRight"],
+            ["fenceLeft", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "fenceRight"],
+            ["fenceLeft", "dirt", "dirt", "tree", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "fenceRight"],
+            ["fenceLeft", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "tree", "dirt", "fenceRight"],
+            ["fenceLeft", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "fenceRight"],
+            ["fenceLeft", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "fenceRight"],
+            ["fenceLeft", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "fenceRight"],
+            ["fenceLeft", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "fenceRight"],
+            ["fenceLeft", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "fenceRight"],
+            ["fenceLeft", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "dirt", "fenceRight"],
+            ["fenceLL", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceBottom", "fenceLR"]
+        ];
+
+        // Layered rendering system
+        function drawMap(map) {
+            const renderLayers = [[], [], []]; // 0: base, 1: mid, 2: top
+
+            // Sort tiles by z-index
+            for (let row = 0; row < map.length; row++) {
+                for (let col = 0; col < map[row].length; col++) {
+                    const tileName = map[row][col];
+                    const tileData = tileImages[tileName];
+
+                    if (tileData) {
+                        const renderData = {
+                            img: tileData.img,
+                            x: col * 32,
+                            y: row * 32,
+                            width: 32,
+                            height: 32
+                        };
+
+                        renderLayers[tileData.zIndex].push(renderData);
+                    }
+                }
+            }
+
+            // Draw base layer (grass, dirt)
+            renderLayers[0].forEach(tile => {
+                ctx.drawImage(tile.img, tile.x, tile.y, tile.width, tile.height);
+            });
+
+            // Draw mid layer (fences, houses)
+            renderLayers[1].forEach(tile => {
+                ctx.drawImage(tile.img, tile.x, tile.y, tile.width, tile.height);
+            });
+
+            // Draw house in Green Plains
+            if (currentArea === 'Green Plains') {
+                ctx.drawImage(tileImages.house.img, 288, 160, 64, 64);
+            }
+
+            return renderLayers[2]; // Return top layer for later rendering
+        }
+
+        function drawBackground() {
+            let topLayer = [];
+
+            if (currentArea === 'Green Plains') {
+                topLayer = drawMap(townMap);
+            } else if (currentArea === 'Slime Woods') {
+                topLayer = drawMap(slimeForestMap);
+            }
+
+            return topLayer;
+        }
+
+        function updateHUD() {
+            document.getElementById("areaName").textContent = `Area: ${currentArea}`;
+            document.getElementById("level").textContent = `Level: ${player.level}`;
+            document.getElementById("exp").textContent = `EXP: ${player.exp} / 100`;
+            document.getElementById("strength").textContent = `Strength: ${player.strength}`;
+            document.getElementById("armor").textContent = `Armor: ${player.armor}`;
+            document.getElementById("weapon").textContent = `Weapon: ${player.weapon}`;
+            document.getElementById("potions").textContent = `Potions: ${player.potions}`;
+        }
+
+        function movePlayer() {
+            let newX = player.x;
+            let newY = player.y;
+            player.moving = false;
+
+            if (keys['w'] || keys['arrowup']) {
+                newY -= player.speed;
+                player.moving = true;
+                player.direction = 'up';
+            }
+            if (keys['s'] || keys['arrowdown']) {
+                newY += player.speed;
+                player.moving = true;
+                player.direction = 'down';
+            }
+            if (keys['a'] || keys['arrowleft']) {
+                newX -= player.speed;
+                player.moving = true;
+                player.direction = 'left';
+            }
+            if (keys['d'] || keys['arrowright']) {
+                newX += player.speed;
+                player.moving = true;
+                player.direction = 'right';
+            }
+
+            // Boundary checking
+            if (newX >= 32 && newX <= canvas.width - 64 &&
+                newY >= 32 && newY <= canvas.height - 64) {
+                player.x = newX;
+                player.y = newY;
+            }
+        }
+
+        function drawPlayer() {
+            let sprite = playerSprites.idle;
+            if (player.attacking) {
+                sprite = playerSprites.attacking;
+            } else if (player.moving) {
+                sprite = playerSprites.walking;
+            }
+
+            ctx.drawImage(sprite, player.x, player.y, player.width, player.height);
+
+            // Health bar
+            ctx.fillStyle = "red";
+            ctx.fillRect(player.x, player.y - 10, player.width, 5);
+            ctx.fillStyle = "lime";
+            ctx.fillRect(player.x, player.y - 10, (player.hp / player.maxHp) * player.width, 5);
+        }
+
+        function drawNPCs() {
+            npcs.forEach(npc => {
+                ctx.drawImage(npcSprite, npc.x, npc.y, npc.width, npc.height);
+
+                // Check if player is nearby
+                const distance = Math.sqrt(
+                    Math.pow(player.x - npc.x, 2) + Math.pow(player.y - npc.y, 2)
+                );
+
+                if (distance < 50) {
+                    ctx.fillStyle = "white";
+                    ctx.font = "12px Arial";
+                    ctx.fillText(npc.message, npc.x - 50, npc.y - 15);
+                }
+            });
+        }
+
+        function attack() {
+            if (attackCooldown > 0 || player.hp <= 0) return;
+
+            if (keys[' '] || keys['enter'] || mouseClicked) {
+                attackCooldown = 30;
+                player.attacking = true;
+                player.attackTimer = 20;
+
+                enemies.forEach(enemy => {
+                    if (enemy.alive) {
+                        const distance = Math.sqrt(
+                            Math.pow(player.x - enemy.x, 2) + Math.pow(player.y - enemy.y, 2)
+                        );
+
+                        if (distance < 50) {
+                            enemy.hp -= player.attack;
+                            if (enemy.hp <= 0) {
+                                enemy.alive = false;
+                                player.exp += 10;
+
+                                if (player.exp >= 100) {
+                                    player.level++;
+                                    player.exp = 0;
+                                    player.maxHp += 20;
+                                    player.hp = player.maxHp;
+                                    player.attack += 5;
+                                    player.strength += 5;
+                                }
+                                updateHUD();
+                            }
+                        }
+                    }
+                });
+            }
+        }
+
+        function switchArea(areaName) {
+            currentArea = areaName;
+            initializeArea();
+            updateHUD();
+        }
+
+        function saveGame() {
+            const data = {
+                player,
+                inventory,
+                quests,
+                currentArea
+            };
+            localStorage.setItem("gameSave", JSON.stringify(data));
+            alert("Game saved!");
+        }
+
+        function loadGame() {
+            const data = JSON.parse(localStorage.getItem("gameSave"));
+            if (data) {
+                Object.assign(player, data.player);
+                Object.assign(inventory, data.inventory);
+                if (data.quests && data.quests[0]) {
+                    Object.assign(quests[0], data.quests[0]);
+                }
+                currentArea = data.currentArea || 'Green Plains';
+                initializeArea();
+                updateHUD();
+                alert("Game loaded!");
+            }
+        }
+
+        function renderInventory() {
+            const list = document.getElementById("inventoryItems");
+            list.innerHTML = "";
+            inventory.items.forEach(item => {
+                const li = document.createElement("li");
+                li.textContent = item;
+                list.appendChild(li);
+            });
+        }
+
+        // Event listeners
+        document.addEventListener("keydown", e => {
+            if (e.key === "F5") {
+                e.preventDefault();
+                saveGame();
+            }
+            if (e.key === "F9") {
+                e.preventDefault();
+                loadGame();
+            }
+            if (e.key.toLowerCase() === "i") {
+                const inv = document.getElementById("inventory");
+                inv.style.display = inv.style.display === "none" ? "block" : "none";
+                renderInventory();
+            }
+        });
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw background and get top layer tiles
+            const topLayer = drawBackground();
+
+            // Update and draw enemies
+            enemies.forEach(enemy => {
+                enemy.update();
+                enemy.draw();
+            });
+
+            // Draw NPCs
+            drawNPCs();
+
+            // Draw player
+            drawPlayer();
+
+            // Draw top layer tiles (trees, etc.) above player
+            if (topLayer) {
+                topLayer.forEach(tile => {
+                    ctx.drawImage(tile.img, tile.x, tile.y, tile.width, tile.height);
+                });
+            }
+
+            // Update game systems
+            movePlayer();
+            attack();
+
+            // Update timers
+            if (attackCooldown > 0) attackCooldown--;
+            if (player.attackTimer > 0) {
+                player.attackTimer--;
+                if (player.attackTimer <= 0) {
+                    player.attacking = false;
+                }
+            }
+
+            // Area transitions
+            if (player.x > canvas.width - 64 && currentArea === 'Green Plains') {
+                player.x = 64;
+                switchArea('Slime Woods');
+            } else if (player.x < 64 && currentArea === 'Slime Woods') {
+                player.x = canvas.width - 96;
+                switchArea('Green Plains');
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Initialize game
+        initializeArea();
+        updateHUD();
+        gameLoop();
+    </script>
 </body>
 
 </html>
